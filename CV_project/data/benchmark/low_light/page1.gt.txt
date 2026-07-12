@@ -1,0 +1,6 @@
+INVOICE 2043
+Customer name Rahul Sharma
+Item Wireless Mouse
+Quantity 2 units
+Total amount 1450 rupees
+Thank you for shopping with us

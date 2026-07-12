@@ -1,0 +1,37 @@
+# docint — pinned dependencies (Python 3.11; the Dockerfile is the canonical env).
+
+# Core numerics / CV
+numpy==1.26.4                 # keep <2 — paddlepaddle 2.6 wheels are built against numpy 1.x
+opencv-python==4.6.0.66      # ceiling imposed by paddleocr 2.7.3
+opencv-contrib-python==4.6.0.66  # required by paddleocr 2.7.3 (same cv2 namespace/version)
+
+# OCR — default backend (detection + recognition)
+paddlepaddle==2.6.2           # CPU build (2.6.1 was pulled from PyPI); paddlepaddle-gpu on CUDA hosts
+paddleocr==2.7.3
+
+# OCR — optional Tesseract backend
+# (requires the tesseract binary plus mar/hin traineddata — see Dockerfile)
+pytesseract==0.3.10
+
+# API
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9       # multipart file uploads for FastAPI
+pydantic==2.7.4
+httpx==0.27.0                 # FastAPI TestClient + gradio dependency
+
+# Demo UI
+gradio==4.36.1
+huggingface_hub==0.23.4       # gradio 4.36 has no ceiling but imports HfFolder (removed in hub 1.x)
+
+# Config / imaging
+PyYAML==6.0.1
+Pillow==10.4.0                # ceiling <11 imposed by gradio 4.36
+
+# Evaluation & tests
+jiwer==3.0.4                  # CER / WER metrics
+pytest==8.2.2
+
+# Optional TrOCR recognition backend — heavy (~2 GB); uncomment to enable.
+# torch==2.3.1
+# transformers==4.41.2

@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "docint"
+version = "0.1.0"
+description = "Document Intelligence Pipeline — phone photo of a document to structured JSON + searchable text (OpenCV + PaddleOCR)"
+readme = "README.md"
+requires-python = ">=3.11"
+# Runtime dependencies are pinned in requirements.txt (single source of truth
+# for the application image); this package installs with --no-deps on top.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "eval", "."]
+addopts = "-q"

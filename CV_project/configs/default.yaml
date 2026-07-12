@@ -1,0 +1,97 @@
+# docint — every tunable parameter lives here; nothing in src/ hardcodes a
+# threshold. Each module receives the config section named after it.
+# Values are starting points — tune them against eval/benchmark.py, not by
+# editing code.
+
+preprocess:
+  max_side_px: 2000            # downscale longest image side before CV steps (0 = never)
+  boundary:
+    gaussian_ksize: 5          # blur kernel before Canny (odd)
+    canny_low: 50
+    canny_high: 150
+    morph_close_ksize: 3       # close small Canny gaps before contour search (odd)
+    approx_epsilon_frac: 0.02  # approxPolyDP epsilon as a fraction of contour perimeter
+    min_area_frac: 0.25        # accepted quad must cover >= this fraction of the frame
+    hough:                     # fallback when the contour search finds no quad
+      threshold: 60
+      min_line_length_frac: 0.30   # of min(image width, height)
+      max_line_gap_px: 20
+  deskew:
+    max_abs_angle_deg: 15.0    # ignore rotations beyond this (likely a wrong estimate)
+    min_ink_px: 200            # fewer thresholded ink pixels -> skip estimation (angle 0)
+    max_ink_px: 200000         # subsample ink pixels beyond this cap (speed)
+    hough_threshold: 100       # fallback estimator: HoughLinesP votes
+    angle_resolution_deg: 0.5  # fallback estimator: theta resolution
+    min_line_length_frac: 0.15 # fallback estimator: min segment length, frac of width
+    max_line_gap_px: 10        # fallback estimator: max gap within a segment
+  enhance:
+    mode: clahe                # clahe | adaptive | both
+    clahe_clip_limit: 2.0
+    clahe_tile_grid: 8
+    adaptive_block_size: 31    # adaptiveThreshold neighborhood (odd)
+    adaptive_c: 15             # constant subtracted from the local mean
+  shadow:
+    enabled: true
+    dilate_kernel: 7           # background estimation: dilate then median-blur
+    median_ksize: 21           # (odd)
+  blur:
+    laplacian_threshold: 120.0 # variance of Laplacian below this => retake_photo = true
+
+detect:
+  backend: paddle              # registry key in docint.detect (future: craft, east)
+  reading_order:
+    line_overlap_frac: 0.5     # min vertical overlap (of the shorter box) to share a line
+  paddle:
+    det_db_thresh: 0.3
+    det_db_box_thresh: 0.6
+    det_db_unclip_ratio: 1.6
+    det_limit_side_len: 960
+
+recognize:
+  backend: paddle              # paddle | tesseract | trocr
+  default_lang: en             # en | mar | hin — recognizer constructor default
+  min_confidence: 0.50         # drop spans below this, with a warning on the result
+  paddle:
+    lang_map: {en: en, mar: devanagari, hin: devanagari}
+    rec_batch_num: 6
+  tesseract:
+    lang_map: {en: eng, mar: mar, hin: hin}
+    psm: 6                     # page segmentation mode: assume a block of text
+    oem: 3                     # default LSTM engine
+  trocr:
+    # mar/hin require fine-tuned checkpoints; only English ships by default.
+    lang_map: {en: microsoft/trocr-base-printed}
+
+layout:
+  line_overlap_frac: 0.5       # line grouping for classification (mirrors detect.reading_order)
+  block_merge_gap_ratio: 1.4   # merge same-type lines into a block if vertical gap <= ratio * median line height
+  heading:
+    height_percentile: 85      # line height must reach this percentile of all line heights...
+    min_height_ratio: 1.5      # ...AND be >= ratio * median line height (guards uniform pages)
+    max_words: 12
+  table:
+    min_columns: 2             # >= this many x-aligned columns across rows
+    min_rows: 2
+    x_align_tol_px: 18
+  question_parser:
+    # question_start: compiled with re.IGNORECASE; the parser reads the first
+    # non-empty capture group as the question number (kept as printed, incl.
+    # Devanagari numerals). Prefixed starts ("Q1.", "Q 1)", "Que 2", "Question 3:",
+    # "प्र.४", "प्रश्न ५") need no delimiter after the number; bare numbers
+    # ("1.", "2)") require one so ordinary sentences don't false-positive.
+    question_start: '(?m)^[ \t]*(?:(?:Question|Que|Q|प्रश्न|प्र)[ \t]*\.?[ \t]*([0-9०-९]+)[ \t]*[).:।-]?|([0-9०-९]+)[ \t]*[).:।])[ \t]*'
+    # option_marker: compiled case-SENSITIVE (patterns spell out case). Styles:
+    # "(a)".."(d)" / "(अ)".."(ड)" anywhere; "a)".."d)" and "A.".."D." at word starts.
+    option_marker: '(?:\([ \t]*([a-dA-Dअबकड])[ \t]*\)|(?<!\S)([a-dA-D])[ \t]*\)|(?<!\S)([A-D])\.(?!\S))'
+    max_options: 6
+
+pipeline:
+  return_intermediates: true   # keep per-stage images on PipelineResult (the demo needs them)
+  fail_fast: false             # true only in development; production degrades gracefully
+
+api:
+  max_upload_mb: 15            # larger uploads -> 413 (decoding decides image validity, not content-type)
+
+eval:
+  benchmark_dir: data/benchmark   # <condition>/<image>.jpg + <image>.gt.txt pairs (gitignored)
+  conditions: [clean_scan, angled_photo, low_light, handwritten]
